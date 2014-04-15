@@ -1,8 +1,7 @@
 smartsantander
 ==============
 
-Java library for accessing SmartSantander's sensors data, both real time and historical, as described in the Service Documentation: http://smartsantander.eu/wiki/index.php/Data/SEN2SOCSmartSantanderIntegration
-
+Java library for accessing [SmartSantander](http://smartsantander.eu)'s sensors data, both real time and historical, as described in the [project wiki](http://smartsantander.eu/wiki/index.php/Data/SEN2SOCSmartSantanderIntegration). 
 
 Check the API for more details:
 

@@ -5,7 +5,7 @@ Java library for accessing [SmartSantander](http://smartsantander.eu)'s sensors 
 
 Check the API for more details:
 
-http://predictia.github.io/smartsantander/index.html
+http://predictia.github.io/smartsantander/apidocs/index.html
 
 Import as maven dependency
 --------------------------

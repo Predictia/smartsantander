@@ -1,9 +1,8 @@
 package es.predictia.smartsantander.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,16 +52,18 @@ public class SENS2SOCServiceTest{
 	
 	@Test
 	public void testLastValue() throws Exception{
-		List<TemperatureValue> nodes = service.getLastTemperatureValues(new Node(3));
+		List<TemperatureValue> nodes = service.getLastTemperatureValues(node);
 		Assert.assertFalse(nodes.isEmpty());
 	}
 	
 	@Test
 	public void testValue() throws Exception{
-		List<TemperatureValue> lastValues = service.getLastTemperatureValues(new Node(3));
-		DateTime lastValue = lastValues.get(0).getDate();
-		List<TemperatureValue> nodes = service.getTemperatureValues(new Node(3), new Interval(lastValue.minusDays(1), lastValue));
+		List<TemperatureValue> lastValues = service.getLastTemperatureValues(node);
+		LocalDateTime lastValue = lastValues.get(0).getDate();
+		List<TemperatureValue> nodes = service.getTemperatureValues(node, lastValue.minusDays(1), lastValue);
 		Assert.assertFalse(nodes.isEmpty());
 	}
+	
+	private final Node node = Node.builder().nodeId(3).build();
 	
 }

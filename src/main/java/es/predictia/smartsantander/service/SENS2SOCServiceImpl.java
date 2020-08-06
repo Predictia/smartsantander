@@ -2,21 +2,17 @@ package es.predictia.smartsantander.service;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Scanner;
+import java.util.stream.Collectors;
 
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializationContext;
@@ -34,9 +30,9 @@ import es.predictia.smartsantander.model.MobileValue;
 import es.predictia.smartsantander.model.Node;
 import es.predictia.smartsantander.model.NodeType;
 import es.predictia.smartsantander.model.TemperatureValue;
-import es.predictia.util.URLs;
-import es.predictia.util.date.TimeZone;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class SENS2SOCServiceImpl implements SENS2SOCService {
 
 	private static final String BASE_URL = "http://data.smartsantander.eu/SENS2SOC";
@@ -54,7 +50,7 @@ public class SENS2SOCServiceImpl implements SENS2SOCService {
 		if(nodes == null){
 			return Collections.emptyList();
 		}else{
-			return ImmutableList.copyOf(nodes);
+			return Collections.unmodifiableList(nodes);
 		}
 	}
 	
@@ -65,7 +61,7 @@ public class SENS2SOCServiceImpl implements SENS2SOCService {
 		if(values == null){
 			return Collections.emptyList();
 		}else{
-			return ImmutableList.copyOf(values);
+			return Collections.unmodifiableList(values);
 		}
 	}
 
@@ -76,7 +72,7 @@ public class SENS2SOCServiceImpl implements SENS2SOCService {
 		if(values == null){
 			return Collections.emptyList();
 		}else{
-			return ImmutableList.copyOf(values);
+			return Collections.unmodifiableList(values);
 		}
 	}
 
@@ -87,7 +83,7 @@ public class SENS2SOCServiceImpl implements SENS2SOCService {
 		if(values == null){
 			return Collections.emptyList();
 		}else{
-			return ImmutableList.copyOf(values);
+			return Collections.unmodifiableList(values);
 		}
 	}
 	
@@ -96,17 +92,15 @@ public class SENS2SOCServiceImpl implements SENS2SOCService {
 		if(nodeTypes == null){
 			return Collections.emptyList();
 		}else{
-			return ImmutableList.copyOf(Iterables.filter(getNodes(), new Predicate<Node>() {
-				@Override
-				public boolean apply(Node arg0) {
-					for(NodeType nodeType : nodeTypes){
-						if(nodeType.name().equalsIgnoreCase(arg0.getType())){
-							return true;
-						}
+			return getNodes().stream().filter(arg0 -> {
+				for(NodeType nodeType : nodeTypes){
+					if(nodeType.name().equalsIgnoreCase(arg0.getType())){
+						return true;
 					}
-					return false; 
 				}
-			}));
+				return false;
+			})
+			.collect(Collectors.toList());
 		}
 	}
 
@@ -117,56 +111,58 @@ public class SENS2SOCServiceImpl implements SENS2SOCService {
 		if(values == null){
 			return Collections.emptyList();
 		}else{
-			return ImmutableList.copyOf(Iterables.filter(values, TemperatureValue.IS_VALID));
+			return values.stream()
+				.filter(TemperatureValue.IS_VALID)
+				.collect(Collectors.toList());
 		}
 	}
 	
 	@Override
-	public List<TemperatureValue> getTemperatureValues(Node node, Interval interval) throws IOException {
+	public List<TemperatureValue> getTemperatureValues(Node node, LocalDateTime start, LocalDateTime end) throws IOException {
 		Type valuesType = new TypeToken<List<TemperatureValue>>(){}.getType();
-		List<TemperatureValue> values = GSON.fromJson(
-			getUrlContent(
-				HISTORIC_BASE_URL + node.getNodeId() + "/" + FMT.print(interval.getStart()) + "/" + FMT.print(interval.getEnd())
-			), 
-			valuesType
-		);
+		var startStr = URLEncoder.encode(FMT.format(start), StandardCharsets.UTF_8);
+		var endStr = URLEncoder.encode(FMT.format(end), StandardCharsets.UTF_8);
+		var urlStr = String.format("%s%s/%s/%s", HISTORIC_BASE_URL, node.getNodeId(), startStr, endStr);
+		List<TemperatureValue> values = GSON.fromJson(getUrlContent(urlStr), valuesType);
 		if(values == null){
 			return Collections.emptyList();
 		}else{
-			return ImmutableList.copyOf(Iterables.filter(values, TemperatureValue.IS_VALID));
+			return values.stream()
+				.filter(TemperatureValue.IS_VALID)
+				.collect(Collectors.toList());
 		}	
 	}
 	
 	private static String getUrlContent(String urlStr) throws IOException {
-		try {
-			URL url = URLs.getUrl(urlStr);
-			LOGGER.debug("Retrieving : " + url);
-			return URLs.getUrlContent(url, 60000);
-		} catch (URISyntaxException e) {
-			throw new RuntimeException(e);
+		log.debug("Fetching contents from {}", urlStr);
+		var url = new URL(urlStr);
+		try (var scanner = new Scanner(url.openStream(), StandardCharsets.UTF_8)) {
+			scanner.useDelimiter("\\A");
+			return scanner.hasNext() ? scanner.next() : "";
 		}
 	}
 
-	private static final Gson GSON = new GsonBuilder().registerTypeAdapter(DateTime.class, new DateTimeAdapter()).create();
+	private static final Gson GSON = new GsonBuilder().registerTypeAdapter(LocalDateTime.class, new DateTimeAdapter()).create();
 	
-	private static class DateTimeAdapter implements JsonSerializer<DateTime>, JsonDeserializer<DateTime>{	
+	private static class DateTimeAdapter implements JsonSerializer<LocalDateTime>, JsonDeserializer<LocalDateTime>{	
 		
 		@Override 
-		public JsonElement serialize(DateTime arg0, Type arg1, JsonSerializationContext arg2) {
-			return new JsonPrimitive(FMT.print(arg0));
+		public JsonElement serialize(LocalDateTime arg0, Type arg1, JsonSerializationContext arg2) {
+			return new JsonPrimitive(FMT.format(arg0));
 		}
 		
 		@Override
-		public DateTime deserialize(JsonElement jsonelement, Type type, JsonDeserializationContext jsondeserializationcontext) throws JsonParseException {
+		public LocalDateTime deserialize(JsonElement jsonelement, Type type, JsonDeserializationContext jsondeserializationcontext) throws JsonParseException {
 			try{
-				return FMT.parseDateTime(jsonelement.getAsString());
+				return LocalDateTime.parse(jsonelement.getAsString(), FMT);
 			}catch(IllegalArgumentException e){
 				return null;
 			}
 		}
 	}
 
-	private static final DateTimeFormatter FMT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(TimeZone.getTimeZone("Madrid"));
-	private final static Logger LOGGER = LoggerFactory.getLogger(SENS2SOCServiceImpl.class);
+	private static final DateTimeFormatter FMT = DateTimeFormatter
+		.ofPattern("yyyy-MM-dd HH:mm:ss")
+		.withZone(ZoneId.of("Europe/Madrid"));
 
 }

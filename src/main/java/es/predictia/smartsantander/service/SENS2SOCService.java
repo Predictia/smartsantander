@@ -1,9 +1,8 @@
 package es.predictia.smartsantander.service;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
-
-import org.joda.time.Interval;
 
 import es.predictia.smartsantander.model.EnviromentValue;
 import es.predictia.smartsantander.model.IrrigationValue;
@@ -27,6 +26,6 @@ public interface SENS2SOCService {
 	public List<MobileValue> getLastMobileValues() throws IOException;
 	
 	public List<TemperatureValue> getLastTemperatureValues(Node node) throws IOException;
-	public List<TemperatureValue> getTemperatureValues(Node node, Interval interval) throws IOException;
+	public List<TemperatureValue> getTemperatureValues(Node node, LocalDateTime start, LocalDateTime end) throws IOException;
 	
 }

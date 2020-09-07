@@ -1,6 +1,7 @@
 package es.predictia.smartsantander.service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 import org.junit.Assert;
@@ -12,8 +13,10 @@ import es.predictia.smartsantander.model.IrrigationValue;
 import es.predictia.smartsantander.model.MobileValue;
 import es.predictia.smartsantander.model.Node;
 import es.predictia.smartsantander.model.TemperatureValue;
+import lombok.extern.slf4j.Slf4j;
 
-public class SENS2SOCServiceTest{
+@Slf4j
+public class SENS2SOCServiceTest {
 
 	private SENS2SOCService service;
 	
@@ -34,6 +37,10 @@ public class SENS2SOCServiceTest{
 		Assert.assertFalse(values.isEmpty());
 		Assert.assertNotNull(values.get(0).getDate());
 		Assert.assertNotNull(values.get(0).getTemperature());
+		values.stream()
+			.sorted(Comparator.comparing(EnviromentValue::getDate).reversed())
+			.limit(10)
+			.forEach(e -> log.debug("Updated value at {} values: {}", e.getDate(), e));
 	}
 
 	@Test
